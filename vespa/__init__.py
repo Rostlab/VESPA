@@ -1,0 +1,7 @@
+__author__ = "Tobias O, Michael H., Celine M."
+__copyright__ = "Copyright 2021, Rostlab"
+__license__ = "AGPL-3.0-or-later"
+__version__ = "1.0.0"
+__maintainer__ = "Tobias O."
+__email__ = ""
+__status__ = "Production"

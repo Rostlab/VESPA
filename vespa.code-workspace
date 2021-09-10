@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"licenser.author": "Rostlab",
+		"licenser.license": "AGPLv3",
+		"licenser.projectName": "VESPA",
+		"licenser.useSingleLineStyle": false
+	}
+}
