@@ -21,8 +21,6 @@
 import argparse
 import time
 from pathlib import Path
-from typing import Dict, NamedTuple
-from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -35,7 +33,6 @@ from vespa.predict.config import (
     CSV_SEP,
     MUTANT_ORDER,
     REPLACE_RARE_AA,
-    REVERSE_MUTANT_ORDER,
     TRANSFORMER_LINK,
     SPIECE_UNDERLINE,
     VERBOSE,
@@ -46,13 +43,6 @@ from vespa.predict import utils
 
 if VERBOSE:
     print("Using device: {}".format(DEVICE))
-
-
-@dataclass
-class __ProbaVector:
-    vector: np.ndarray
-    mask: np.ndarray
-    wt_vector_pos: int
 
 
 class T5_condProbas:
@@ -110,9 +100,7 @@ class T5_condProbas:
         ]  # extract for the masked position only logits of 20 std. AAs
         return self.softmax(aa_logits)
 
-    def __get_reconstruction_probas(
-        self, seq_dict, mutation_gen: utils.MutationGenerator
-    ) -> Dict[str, __ProbaVector]:
+    def get_cond_probas(self, seq_dict, mutation_gen: utils.MutationGenerator):
         """
         Compute for all residues in a protein the conditional probabilities for reconstructing single, masked tokens.
         """
@@ -120,12 +108,14 @@ class T5_condProbas:
         self.model, self.tokenizer = self.get_model()
 
         result_dict = dict()
+        overall_time = time.time()
 
         for identifier, position_list in tqdm(
             mutation_gen.generate_mutation_mask(),
-            desc="Extract Sequence Probabilities",
+            desc="Extract Sequence Logodds",
             disable=not VERBOSE,
         ):
+            sample_start = time.time()
 
             wt_seq = seq_dict[identifier]
             seq_len = len(wt_seq)
@@ -149,31 +139,29 @@ class T5_condProbas:
                         )
                     )
                     continue
-                result_entry = __ProbaVector(
-                    vector=aa_probas.detach().cpu().numpy().squeeze(),
-                    mask=filter_mask,
-                    wt_vector_pos=REVERSE_MUTANT_ORDER[wt_seq[residue_idx]],
-                )
-                result_dict[identifier][residue_idx] = result_entry
+                result_vec = aa_probas.detach().cpu().numpy().squeeze() * filter_mask
+                result_dict[identifier][residue_idx] = result_vec
 
-        return result_dict
-
-    def get_reconstruction_probas(
-        self, seq_dict, mutation_gen: utils.MutationGenerator
-    ):
-        proba_vec_dict = self.__get_reconstruction_probas(seq_dict, mutation_gen)
-        return {key: proba_vec_dict[key].vector for key in proba_vec_dict}
-
-    def get_logodds(self, seq_dict, mutation_gen: utils.MutationGenerator):
-        proba_vec_dict = self.__get_reconstruction_probas(seq_dict, mutation_gen)
-        logodds = dict()
-        for identifier in proba_vec_dict:
-            proba_vec = proba_vec_dict[identifier]
-            vector = np.log(proba_vec.vector) - np.log(
-                proba_vec.vector[proba_vec.wt_vector_pos]
+            accuracy = self.measure_reconstruction_accuracy(
+                wt_seq, result_dict[identifier]
             )
-            vector = vector * proba_vec.mask
-            logodds[identifier] = vector
+            if VERBOSE:
+                print(
+                    "Acc={:.3f} (time={:.2f}[s] L={})".format(
+                        accuracy, time.time() - sample_start, seq_len
+                    )
+                )
+
+        end = time.time()
+        if VERBOSE:
+            print("\n############# STATS #############")
+            print("Total number of proteins: {}".format(len(result_dict)))
+            print(
+                "Total time: {:.2f}[s]; time/prot: {:.2f}[s]".format(
+                    end - overall_time, (end - overall_time) / len(result_dict)
+                )
+            )
+        return result_dict
 
     @staticmethod
     def write_single_h5(dmiss_data, h5_path):
