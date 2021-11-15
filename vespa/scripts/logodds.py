@@ -46,8 +46,23 @@ def create_arg_parser():
         "--output",
         required=False,
         type=Path,
-        default=Path("T5_log_odds.h5"),
+        default=Path("T5_logodds.h5"),
         help="Output path to store the computed logodds in h5 format. Does not contain the original sequence data (FromAA in SAV format not reconstructable without sequence)! Contains a -1 in the matrix if a specific mutation was not computed.",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--reconstruction_probas",
+        default=False,
+        action="store_true",
+        help="Output the reconstrcution probabilites of T5 for a masked language model problem. The output is a 20-dimensional vector for all considered residue positions (all positions with at least one mutation or all positions if no file provided) giving the raw probability for each amino acid according to the MUTANT_ORDER.",
+    )
+
+    parser.add_argument(
+        "--reconstruction_output",
+        type=Path,
+        default=Path("T5_reconstruction_probas.h5"),
+        help="Output path to store the computed reconstruction probabilities in h5 format. Does not contain the original sequence data (FromAA in SAV format not reconstructable without sequence)!",
     )
 
     parser.add_argument(
@@ -75,7 +90,7 @@ def create_arg_parser():
         "--one_based_mutations",
         required=False,
         action="store_true",
-        help="Flag to determine if mutation file is one based",
+        help="Flag to determine if mutation file is one based. NOTE: all SAV strings generated bt this tool are one based.",
     )
     parser.add_argument(
         "-v",
@@ -88,12 +103,17 @@ def create_arg_parser():
     return parser
 
 
-def create_log_odds(seq_dict, mutation_gen):
+def create_log_odds(seq_dict, mutation_gen, extract_probas=False):
     t5_condProbas = T5_condProbas(cache_dir=CACHE_DIR)
     if VERBOSE:
         print("Running DMISS (Deep mutational in-silico scanning.)")
-    dmiss_data = t5_condProbas.get_cond_probas(seq_dict, mutation_gen)
-    return dmiss_data
+    proba_dict = t5_condProbas.get_proba_dict(seq_dict, mutation_gen)
+    dmiss_data = t5_condProbas.get_log_odds(proba_dict)
+    probas = None
+    if extract_probas:
+        probas = t5_condProbas.get_rec_probabilities(proba_dict)
+
+    return dmiss_data, probas
 
 
 def main():
@@ -112,9 +132,14 @@ def main():
         one_based_file=args.one_based_mutations,
     )
 
-    dmiss_data = create_log_odds(seq_dict, mutation_gen)
+    dmiss_data, probas = create_log_odds(
+        seq_dict, mutation_gen, args.reconstruction_probas
+    )
 
     T5_condProbas.write_single_h5(dmiss_data, out_path)
+
+    if args.reconstruction_probas:
+        T5_condProbas.write_single_h5(probas, args.reconstruction_output)
 
     if args.single_csv:
         T5_condProbas.write_single_csv(dmiss_data, args.single_csv, mutation_gen)

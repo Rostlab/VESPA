@@ -127,9 +127,26 @@ Now you have all the data available to run **VESPA** and/or **VESPAl**. Per-defa
 **Note:** Running VESPA automatically generates predictions for both models.
 The format of the results file is described below at *VESPA and VESPAl output*
 
+### Extracting the raw reconstruction probabilities
+
+You might be interested in extracting the raw reconstruction probabilities for each mutation position from T5.
+To do so, use:
+
+```bash
+poetry run vespa_logodds -r --reconstruction_output data/reconstruction_probas -o data/logodds.h5 -m data/mutations.txt data/sequences.fasta
+```
+
+The generated datasets in the [`.h5` file](#h5-files) will contain -1 column-vectors if the mutation position was not considered (i.e. the position was not present in the `mutation.txt`) and otherwise contain probability vectors that determine the reconstruction probabilities for all amino acids sorted according to the `MUTATION_ORDER` in `config.py`.
+
 ## File Specifications
 
 This section describes a few relevant file formats we use for VESPA and VESPAl:
+
+### `.h5` files
+
+Multiple script generate `.h5` files. These files follow the [`hdf5`-standard](https://www.hdfgroup.org/solutions/hdf5)
+and can be processed in python using the library [`h5py`](https://www.h5py.org/). Generally the files are segmented into datasets that can be accessed using the protein accession in the fasta file. Each dataset is matrix shaped and usually has an `NxM`-shape, where `N` is the length of the respective protein length and `M` is the possible number of mutants (including self). `M` is a constant and the mutant length and mutant-order are determined by `MUTANT_ORDER` in `predict/config.py`. Empty fields that were not calculated/ specified contain a -1.
+
 
 ### Mutations file
 
@@ -223,7 +240,7 @@ M0R;0.4457732174287125;0.35202621644931126
 **WARNING Experimental**: To install the current release from github you can use:
 
 ```bash
-python -m pip install https://github.com/Rostlab/VESPA/releases/download/v0.1.0-beta/vespa-0.1.0b0.tar.gz
+python -m pip install https://github.com/Rostlab/VESPA/releases/download/v0.2.0-beta/vespa-0.2.0b0.tar.gz
 ```
 
 Afterwards, all scripts are installed in your current environment and you can call them without the `poetry run` prefix.

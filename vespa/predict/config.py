@@ -44,6 +44,8 @@ TRANSFORMER_LINK = "Rostlab/prot_t5_xl_uniref50"
 REPLACE_RARE_AA = True
 
 MUTANT_ORDER = "ALGVSREDTIPKFQNYMHWC" if REPLACE_RARE_AA else "ALGVSREDTIPKFQNYMHWCUZO"
+REVERSE_MUTANT_ORDER = {item: key for key, item in enumerate(MUTANT_ORDER)}
+
 CSV_SEP = ";"
 RESULT_PREC = -1  # -1 for all comma positions, positive int for cut precision
 
