@@ -21,6 +21,8 @@
 import argparse
 import time
 from pathlib import Path
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -33,6 +35,7 @@ from vespa.predict.config import (
     CSV_SEP,
     MUTANT_ORDER,
     REPLACE_RARE_AA,
+    REVERSE_MUTANT_ORDER,
     TRANSFORMER_LINK,
     SPIECE_UNDERLINE,
     VERBOSE,
@@ -43,6 +46,14 @@ from vespa.predict import utils
 
 if VERBOSE:
     print("Using device: {}".format(DEVICE))
+
+
+@dataclass
+class _ProbaVector:
+    pos: int
+    vector: np.ndarray
+    mask: np.ndarray
+    wt_vector_pos: int
 
 
 class T5_condProbas:
@@ -100,7 +111,7 @@ class T5_condProbas:
         ]  # extract for the masked position only logits of 20 std. AAs
         return self.softmax(aa_logits)
 
-    def get_cond_probas(self, seq_dict, mutation_gen: utils.MutationGenerator):
+    def get_proba_dict(self, seq_dict, mutation_gen: utils.MutationGenerator):
         """
         Compute for all residues in a protein the conditional probabilities for reconstructing single, masked tokens.
         """
@@ -108,18 +119,16 @@ class T5_condProbas:
         self.model, self.tokenizer = self.get_model()
 
         result_dict = dict()
-        overall_time = time.time()
 
         for identifier, position_list in tqdm(
             mutation_gen.generate_mutation_mask(),
             desc="Extract Sequence Logodds",
             disable=not VERBOSE,
         ):
-            sample_start = time.time()
 
             wt_seq = seq_dict[identifier]
             seq_len = len(wt_seq)
-            result_dict[identifier] = np.ones((seq_len, len(MUTANT_ORDER))) * -1
+            result_dict[identifier] = seq_len, list()
 
             for residue_idx, filter_mask in position_list.items():
 
@@ -139,28 +148,40 @@ class T5_condProbas:
                         )
                     )
                     continue
-                result_vec = aa_probas.detach().cpu().numpy().squeeze() * filter_mask
-                result_dict[identifier][residue_idx] = result_vec
-
-            accuracy = self.measure_reconstruction_accuracy(
-                wt_seq, result_dict[identifier]
-            )
-            if VERBOSE:
-                print(
-                    "Acc={:.3f} (time={:.2f}[s] L={})".format(
-                        accuracy, time.time() - sample_start, seq_len
-                    )
+                result_vec = _ProbaVector(
+                    pos=residue_idx,
+                    vector=aa_probas.detach().cpu().numpy().squeeze(),
+                    mask=filter_mask,
+                    wt_vector_pos=REVERSE_MUTANT_ORDER[wt_seq[residue_idx]],
                 )
+                result_dict[identifier][1].append(result_vec)
 
-        end = time.time()
-        if VERBOSE:
-            print("\n############# STATS #############")
-            print("Total number of proteins: {}".format(len(result_dict)))
-            print(
-                "Total time: {:.2f}[s]; time/prot: {:.2f}[s]".format(
-                    end - overall_time, (end - overall_time) / len(result_dict)
-                )
-            )
+        return result_dict
+
+    @staticmethod
+    def get_rec_probabilities(
+        probabiliy_dict: Dict[str, Tuple[int, List[_ProbaVector]]]
+    ):
+        result_dict = dict()
+        for id in probabiliy_dict:
+            seq_len = probabiliy_dict[id][0]
+            array = np.ones((seq_len, len(MUTANT_ORDER))) * -1
+            for prob_vec in probabiliy_dict[id][1]:
+                array[prob_vec.pos] = prob_vec.vector
+            result_dict[id] = array
+        return result_dict
+
+    @staticmethod
+    def get_log_odds(probabiliy_dict: Dict[str, Tuple[int, List[_ProbaVector]]]):
+        result_dict = dict()
+        for id in probabiliy_dict:
+            seq_len = probabiliy_dict[id][0]
+            array = np.ones((seq_len, len(MUTANT_ORDER))) * -1
+            for prob_vec in probabiliy_dict[id][1]:
+                log_vector = np.log(prob_vec.vector)
+                log_vector -= log_vector[prob_vec.wt_vector_pos]
+                array[prob_vec.pos] = log_vector * prob_vec.mask
+            result_dict[id] = array
         return result_dict
 
     @staticmethod
