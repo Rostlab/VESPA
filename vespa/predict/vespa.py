@@ -117,8 +117,18 @@ class VespaPred:
             desc="Blosum Lookup",
             disable=not VERBOSE,
         ):
-            fromAA = fromAA if fromAA != "U" else "*"
-            toAA = toAA if toAA != "U" else "*"
+            fromAA = (
+                fromAA.replace("U", "*")
+                .replace("Z", "*")
+                .replace("O", "*")
+                .replace("X", "*")
+            )
+            toAA = (
+                toAA.replace("U", "*")
+                .replace("Z", "*")
+                .replace("O", "*")
+                .replace("X", "*")
+            )
             vector[idx] = self.subst_matrix.get(fromAA).get(toAA)
             idx += 1
         return vector
@@ -135,9 +145,6 @@ class VespaPred:
             disable=not VERBOSE,
         ):
             probability = logodds_scores[id][pos0idx, mutation_gen.aa2idx[toAA]]
-            assert (
-                probability >= 0 and probability <= 1
-            ), f"Logodds not valid {probability}"
             vector[idx] = probability
             idx += 1
         return vector

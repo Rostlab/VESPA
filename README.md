@@ -26,7 +26,7 @@ The following steps can be run for any number of sequences contained in a FASTA 
 ### Required Input Files
 
 In order to work with `VESPA` you will need to have a single `fasta` file containing all your wildtype sequences.
-If you are only interested in a subset of possible mutations (specific mutant sequences), you will also need a [`mutations.txt`](#mutations-file) as described below.
+**If you are only interested in a subset of possible mutations (specific mutant sequences)**, you will also need a [`mutations.txt`](#mutations-file) as described below (This file is entirely optional; per default all mutations are considered).
 For the purpose of the following guid we will assume the `fasta` file is placed at `data/sequences.fasta` and the `mutations.txt` at `data/mutations.txt`
 
 ### Step 1: Extracting ProtT5 embeddings
@@ -109,7 +109,7 @@ Now you have all the data available to run **VESPA** and/or **VESPAl**. Per-defa
 - **Both** (if you computed the conservation prediction and the logodds):
 
     ```bash
-    poetry run vespa -v data/conspred_probs.h5 data/sequences.fasta -T5_input data/logodds.h5 -m data/mutations.txt --output predictions/
+    poetry run vespa -v data/conspred_probs.h5 data/sequences.fasta --T5_input data/logodds.h5 -m data/mutations.txt --output predictions/
     ```
 
 - **Only VESPA** (if you computed the conservation prediction and the logodds):

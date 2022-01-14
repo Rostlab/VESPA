@@ -20,7 +20,7 @@
 
 from collections import defaultdict
 from pathlib import Path
-from typing import DefaultDict, Dict, Tuple
+from typing import DefaultDict, Dict, Iterable, Iterator, Tuple
 from pyfaidx import Fasta
 import numpy as np
 import re
@@ -96,8 +96,9 @@ class MutationGenerator:
         self,
         sequence_dict: Dict[str, str],
         file_path: Path = None,
-        order=MUTANT_ORDER,
+        order=MUTANT_ORDER,  # ignore X for list of viable mutations
         one_based_file=False,
+        rare_aas=False,
     ) -> None:
         self.one_based = one_based_file
         self.sequence_dict = sequence_dict
@@ -123,12 +124,23 @@ class MutationGenerator:
         else:
             for id in self.sequence_dict:
                 num += len(self.sequence_dict[id]) * (len(self.order) - 1)
+                num += self.sequence_dict[id].count("X")
+
         return num
 
     def total_mutation_num(self):
         return self.total_mut_num
 
     def mutation_num_id(self, id):
+        """
+        Get the number of requested mutations per sequence id
+
+        Args:
+            id (str): Fasta Sequence-Id
+
+        Returns:
+            int : number of requested mutations per sequence
+        """
         if self.load_from_file:
             seq = self.mutation_dict.get(id, None)
             return len(seq) if seq is not None else 0
@@ -137,7 +149,18 @@ class MutationGenerator:
             return len(seq) * (len(self.order) - 1) if seq is not None else 0
 
     @staticmethod
-    def _parse_mutations_from_file(mutation_file: Path, one_based_file):
+    def _parse_mutations_from_file(mutation_file: Path, one_based_file: bool):
+        """
+        Read the mutations file into a dictionary
+
+        Args:
+            mutation_file (Path): Path to the mutations.txt
+            one_based_file (bool): Determines if coordinates in the file start with 1
+
+        Returns:
+            Dict[str, List[Tuple[int, str,str ]]]: Dictionary mapping sequence id to a  sequence of mutation positions followed by fromAA and toAA
+        """
+
         mutations_dict = defaultdict(list)
         with mutation_file.open("r") as mutations:
             for line in mutations:
@@ -146,7 +169,14 @@ class MutationGenerator:
                 mutations_dict[id].append((pos0idx, fromAA, toAA))
         return dict(mutations_dict)
 
-    def __generate_all_mutations_from_file(self) -> Tuple[str, ...]:
+    def __generate_all_mutations_from_file(self) -> Iterator[Tuple[str, ...]]:
+        """
+        Generator function;
+        Yield all mutations for the sequences as listed in the given mutations file.
+
+        Yields:
+            Iterator[Tuple[str, ...]]: Generator that yields sequence id, followed by mutation information (see `generate_all_seq_mutations_from_file`).
+        """
         for id in self.sequence_dict:
             if id in self.mutation_dict:
                 for (
@@ -160,12 +190,32 @@ class MutationGenerator:
         for mutation in self.mutation_dict[id]:
             yield mutation
 
-    def __generate_all_mutations(self) -> Tuple[str, ...]:
+    def __generate_all_mutations(self) -> Iterator[Tuple[str, ...]]:
+        """Generate all viable mutations for every sequence in the given fasta file.
+
+        Returns:
+            Iterable[Tuple[str, ...]]: sequence-id followed by mutations (see `generate_all_seq_mutations`)
+
+        Yields:
+            Iterator[Iterable[Tuple[str, ...]]]: [description]
+        """
         for id, sequence in self.sequence_dict.items():
             for pos0idx, fromAA, toAA in self.__generate_all_seq_mutations(id):
                 yield id, pos0idx, fromAA, toAA
 
-    def __generate_all_seq_mutations(self, id: str) -> Tuple[int, str, str]:
+    def __generate_all_seq_mutations(self, id: str) -> Iterator[Tuple[int, str, str]]:
+        """
+        Generator function;
+        Generate all possible mutations for a given fasta sequence-id.
+
+        Args:
+            id (str): the sequence id in the given fasta file.
+
+
+        Yields:
+            Iterator[Tuple[int, str, str]]: Generator for all possible mutations at each sequence postition; format: 0-based index, fromAA, toAA. Does not gernate self mutations.
+        """
+
         sequence = self.sequence_dict[id]
         for pos0idx in range(len(sequence)):
             for toAA in self.order:
@@ -181,28 +231,53 @@ class MutationGenerator:
                     yield pos0idx, fromAA, toAA
 
     def generate_all_mutations(self):
+        """Generate all mutations either from a mutations file if given or all mutations.
+
+        Returns:
+            Iterable[Tuple[str, int, str, str]]: Sequence-Id, 0-based sequence postion, wild-type AA, mutant AA
+        """
         if self.load_from_file:
             return self.__generate_all_mutations_from_file()
         else:
             return self.__generate_all_mutations()
 
     def generate_mutations_for_seq(self, seq_id):
+        """
+        Retrun generator for all mutations for the given sequence id either from file if given or just all possible mutations
+
+        Args:
+            seq_id (str): The Fasta id of the required sequence
+
+        Returns:
+            Generator[Tuple[int, str, str]] : Generator that generates the relevant sequence 0-based position, fromAA, toAA.
+        """
         if self.load_from_file:
             return self.__generate_all_seq_mutations_from_file(seq_id)
         else:
             return self.__generate_all_seq_mutations(seq_id)
 
-    def generate_mutation_mask(self):
+    def generate_mutation_mask(self, include_x_pos=False):
+        """
+        Generator function.
+        Generates a mutation mask; essentially a numpy array per amino acid position with 1 on positions where scores should be used. This is mostly relevant if not all mutations per position should be considered.
+
+        Yields:
+            Dict[np.array]: dictionary that maps the specific sequence position to the mutations that should be considered.
+        """
         old_id = None
-        idx_filter = defaultdict(lambda: np.zeros(len(self.aa2idx)))
+        aa2idx = self.aa2idx
+        if include_x_pos:
+            aa2idx["X"] = len(self.aa2idx)
+        idx_filter = defaultdict(lambda: np.zeros(len(aa2idx)))
         # Note: relies on the generators producing mutations in order by id
+        # Essentially iterate over mutations until you see new id then return the combined mask.
         for id, pos0idx, fromAA, toAA in self.generate_all_mutations():
             if old_id is None:
                 old_id = id
             if id != old_id:
                 yield old_id, idx_filter
                 old_id = id
-                idx_filter = defaultdict(lambda: np.zeros(len(self.order)))
+                idx_filter = defaultdict(lambda: np.zeros(len(aa2idx)))
 
             idx_filter[pos0idx][self.aa2idx[toAA]] = 1
         yield old_id, idx_filter
