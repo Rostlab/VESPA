@@ -60,12 +60,12 @@ class T5_condProbas:
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
         self.tokenizer = self.get_tokenizer()
-        self.AAs = MUTANT_ORDER
+        self.AAs = MUTANT_ORDER + "X"
         self.AA2class = {AA: idx for idx, AA in enumerate(self.AAs)}
         self.class2AA = {idx: AA for idx, AA in enumerate(self.AAs)}
         self.aaIdcs = [
-            self.tokenizer.get_vocab()["{}{}".format(SPIECE_UNDERLINE, AA)]
-            for AA in self.AAs
+            self.tokenizer.get_vocab()["{}{}".format(SPIECE_UNDERLINE, residue)]
+            for residue in self.AAs
         ]
         self.softmax = torch.nn.Softmax(dim=0)
 
@@ -108,7 +108,7 @@ class T5_condProbas:
             return None
         aa_logits = output[
             0, mut_idx, self.aaIdcs
-        ]  # extract for the masked position only logits of 20 std. AAs
+        ]  # extract for the masked position only AA logits and potentially X if rare_AAs are replaced
         return self.softmax(aa_logits)
 
     def get_proba_dict(self, seq_dict, mutation_gen: utils.MutationGenerator):
@@ -121,7 +121,7 @@ class T5_condProbas:
         result_dict = dict()
 
         for identifier, position_list in tqdm(
-            mutation_gen.generate_mutation_mask(),
+            mutation_gen.generate_mutation_mask(include_x_pos=REPLACE_RARE_AA),
             desc="Extract Sequence Logodds",
             disable=not VERBOSE,
         ):
@@ -152,7 +152,7 @@ class T5_condProbas:
                     pos=residue_idx,
                     vector=aa_probas.detach().cpu().numpy().squeeze(),
                     mask=filter_mask,
-                    wt_vector_pos=REVERSE_MUTANT_ORDER[wt_seq[residue_idx]],
+                    wt_vector_pos=self.AA2class[wt_seq[residue_idx]],
                 )
                 result_dict[identifier][1].append(result_vec)
 
@@ -167,7 +167,9 @@ class T5_condProbas:
             seq_len = probabiliy_dict[id][0]
             array = np.ones((seq_len, len(MUTANT_ORDER))) * -1
             for prob_vec in probabiliy_dict[id][1]:
-                array[prob_vec.pos] = prob_vec.vector
+                # Remove X reconstruction prob as that probability makes little sense
+                vec = prob_vec.vector[:-1]
+                array[prob_vec.pos] = vec
             result_dict[id] = array
         return result_dict
 
@@ -180,7 +182,10 @@ class T5_condProbas:
             for prob_vec in probabiliy_dict[id][1]:
                 log_vector = np.log(prob_vec.vector)
                 log_vector -= log_vector[prob_vec.wt_vector_pos]
-                array[prob_vec.pos] = log_vector * prob_vec.mask
+                # Remove X reconstruction prob as that probability makes little sense
+                vec = log_vector * prob_vec.mask
+                vec = vec[:-1]
+                array[prob_vec.pos] = vec
             result_dict[id] = array
         return result_dict
 
