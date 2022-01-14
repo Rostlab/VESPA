@@ -60,6 +60,21 @@ def setup_argparse():
         help="Path to output csv file.",
         default=Path("./output/"),
     )
+
+    parser.add_argument(
+        "--no_csv",
+        help="Disable csv output",
+        required=False,
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--h5_output",
+        type=Path,
+        help="Write output to a h5 file that contains Lx20 matrices per sequence per model; -1 means no score computed",
+        default=None,
+    )
+
     parser.add_argument(
         "-m",
         "--mutation_file",
@@ -101,6 +116,11 @@ def vespa_pred(args):
     vespa = args.vespa
     vespal = args.vespal
 
+    if args.no_csv and not args.h5_output:
+        raise RuntimeError(
+            "Requested to run no vespa without output. Please specify --h5_output or remove --no_csv."
+        )
+
     if not vespa and not vespal:
         raise RuntimeError(
             "Requested to run no vespa-model. Please at least allow one model! E.g. `--vespa` or `--vespal`"
@@ -114,7 +134,11 @@ def vespa_pred(args):
         input["logodds"] = predictor.parse_logodds_input(args.T5_input)
 
     output = predictor.generate_predictions(mutation_gen=mutation_gen, **input)
-    predictor.write_output(output, out_path)
+    if not args.no_csv:
+        predictor.write_output_csv(output, out_path)
+    if args.h5_output:
+        seq2len = {key: len(seq_dict[key]) for key in seq_dict}
+        predictor.write_output_h5(output, seq2len, args.h5_output)
 
 
 def main():

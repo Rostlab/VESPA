@@ -33,10 +33,12 @@ from vespa.predict.config import (
     MODEL_PATH_DICT,
     NUM_MUTATION_SCORES,
     OUTPUT_MAP_NAME,
+    REVERSE_MUTANT_ORDER,
     VERBOSE,
     VESPAL,
     VESPA,
     CSV_SEP,
+    MUTANT_ORDER,
 )
 from vespa.predict import utils
 
@@ -51,9 +53,9 @@ class VespaPred:
     def __load_subst(self):
         return substitution_matrices.load("BLOSUM62")
 
-    def write_output(self, output, output_dir: Path):
+    def write_output_csv(self, output, output_dir: Path):
         if VERBOSE:
-            tqdm.write(f"Writing Output to {output_dir.absolute()}")
+            tqdm.write(f"Writing CSV Output to {output_dir.absolute()}")
         if output_dir.exists() and not output_dir.is_dir():
             raise ValueError("Output path must be a directory!")
         else:
@@ -72,6 +74,32 @@ class VespaPred:
                     )
         with (output_dir / OUTPUT_MAP_NAME).open("w") as map_file:
             json.dump(map, map_file, indent=4)
+
+    def write_output_h5(self, output, seq_2_len: Dict[str, int], output_h5: Path):
+        if VERBOSE:
+            tqdm.write(f"Writing H5 Output to {output_h5.absolute()}")
+        else:
+            output_h5.parent.mkdir(parents=True, exist_ok=True)
+        with h5py.File(str(output_h5.absolute()), "w") as out_file:
+            for seq_idx in output:
+                seq_grp = out_file.create_group(seq_idx)
+                seq_grp.attrs["residue-order"] = MUTANT_ORDER
+
+                # Get names for models and generate matrices
+                results: Dict[str, np.ndarray] = dict.fromkeys(
+                    self.models,
+                    np.ones((seq_2_len[seq_idx], len(MUTANT_ORDER))) * -1,
+                )
+
+                # Write scores to matrix
+                for info, pred in output[seq_idx]:
+                    fromAA, postion, toAA = utils.parse_sav_str(info)
+                    for name in self.models:
+                        results[name][postion, REVERSE_MUTANT_ORDER[toAA]] = pred[name]
+
+                # Transfer matrix to file
+                for name in self.models:
+                    seq_grp.create_dataset(name, data=results[name])
 
     @staticmethod
     def parse_logodds_input(input_file: Path):
