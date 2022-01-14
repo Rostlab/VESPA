@@ -240,7 +240,7 @@ M0R;0.4457732174287125;0.35202621644931126
 **WARNING Experimental**: To install the current release from github you can use:
 
 ```bash
-python -m pip install https://github.com/Rostlab/VESPA/releases/download/v0.2.0-beta/vespa-0.2.0b0.tar.gz
+python -m pip install https://github.com/Rostlab/VESPA/releases/download/v0.3.0-beta/vespa-0.3.0b0.tar.gz
 ```
 
 Afterwards, all scripts are installed in your current environment and you can call them without the `poetry run` prefix.
