@@ -4,8 +4,7 @@
 
 The single-sequence-based SAV effect prediction is set up in a multistage pipeline that includes (1) generating ProtT5 embeddings, (2) extracting per-residue conservation predictions, (3) (optionally) extracting per-variant log odds ratios, and (4) predicting the effect of all possible amino acid substitutions. Step (4) can be completed by either using **VESPA** with (2) and (3) as input, or by using the computationally more efficient method VESPA-light (**VESPAl**) with only step (2) as input for a small drop in prediction performance.
 
-The specifics of **VESPA** and **VESPAl** can be found at _Embeddings from protein language models predict conservation and variant effects_
-[DOI: 10.21203/rs.3.rs-584804/v1](https://doi.org/10.21203/rs.3.rs-584804/v1)
+The specifics of **VESPA** and **VESPAl** can be found in our paper, [_Embeddings from protein language models predict conservation and variant effects_ (Marquet et al., 2021)](https://doi.org/10.1007/s00439-021-02411-y).
 
 ![Vespa Archictecture](images/Fig1-workflowmethods.png)  
 ![Vespa Performance](images/point_main_0823.png)
@@ -250,7 +249,17 @@ E.g. you can run `vespa ...` instead of `poetry run vespa ...`.
 
 If you want to credit us, feel free to cite
 
-```Latex
-@Article{rs-584804,
-author={Marquet, C{\'e}line and Heinzinger, Michael and Olenyi, Tobias and Dallago, Christian and Bernhofer, Michael and Erckert, Kyra and Rost, Burkhard}, journal={Human Genetics}, year={2021}, month={Oct}, day={15}, doi={10.21203/rs.3.rs-584804/v1}, url={https://doi.org/10.21203/rs.3.rs-584804/v1}}
+Marquet, C., Heinzinger, M., Olenyi, T. et al. Embeddings from protein language models predict conservation and variant effects. Hum Genet (2021). https://doi.org/10.1007/s00439-021-02411-y
+
+```Bibtex
+@article{Marquet2021,
+  doi = {10.1007/s00439-021-02411-y},
+  url = {https://doi.org/10.1007/s00439-021-02411-y},
+  year = {2021},
+  month = dec,
+  publisher = {Springer Science and Business Media {LLC}},
+  author = {C{\'{e}}line Marquet and Michael Heinzinger and Tobias Olenyi and Christian Dallago and Kyra Erckert and Michael Bernhofer and Dmitrii Nechaev and Burkhard Rost},
+  title = {Embeddings from protein language models predict conservation and variant effects},
+  journal = {Human Genetics}
+}
 ```
