@@ -28,7 +28,6 @@ import numpy as np
 import torch
 import h5py
 from tqdm import tqdm
-from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 from vespa.predict.config import (
     CACHE_DIR,
@@ -40,8 +39,10 @@ from vespa.predict.config import (
     SPIECE_UNDERLINE,
     VERBOSE,
     DEVICE,
+    LOGODDS
 )
 from vespa.predict import utils
+from vespa.predict.utils_t5 import ProtT5
 
 
 if VERBOSE:
@@ -58,8 +59,8 @@ class _ProbaVector:
 
 class T5_condProbas:
     def __init__(self, cache_dir):
-        self.cache_dir = cache_dir
-        self.tokenizer = self.get_tokenizer()
+        self.prott5 = ProtT5(cache_dir)
+        self.tokenizer = self.prott5.get_tokenizer()
         self.AAs = MUTANT_ORDER + "X"
         self.AA2class = {AA: idx for idx, AA in enumerate(self.AAs)}
         self.class2AA = {idx: AA for idx, AA in enumerate(self.AAs)}
@@ -68,24 +69,6 @@ class T5_condProbas:
             for residue in self.AAs
         ]
         self.softmax = torch.nn.Softmax(dim=0)
-
-    def get_model(self):
-        model = T5ForConditionalGeneration.from_pretrained(
-            TRANSFORMER_LINK, cache_dir=self.cache_dir
-        )
-        model = model.eval()
-        model = model.to(DEVICE)
-        vocab = T5Tokenizer.from_pretrained(
-            TRANSFORMER_LINK, do_lower_case=False, cache_dir=self.cache_dir
-        )
-
-        return model, vocab
-
-    def get_tokenizer(self):
-        vocab = T5Tokenizer.from_pretrained(
-            TRANSFORMER_LINK, do_lower_case=False, cache_dir=self.cache_dir
-        )
-        return vocab
 
     def reconstruct_sequence(self, probs):
         return [self.class2AA[yhat] for yhat in probs.argmax(axis=1)]
@@ -116,7 +99,7 @@ class T5_condProbas:
         Compute for all residues in a protein the conditional probabilities for reconstructing single, masked tokens.
         """
 
-        self.model, self.tokenizer = self.get_model()
+        self.model, self.tokenizer = self.prott5.get_model(LOGODDS)
 
         result_dict = dict()
 

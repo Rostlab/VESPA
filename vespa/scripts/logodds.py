@@ -100,11 +100,49 @@ def create_arg_parser():
         help="Control the output of the script.",
     )
 
+    parser.add_argument(
+        "--language_model_cache",
+        required=False,
+        type=Path,
+        default=Path(CACHE_DIR),
+        help="Path to directory for storing the weights of the language model ProtT5.",
+    )
+
     return parser
 
 
-def create_log_odds(seq_dict, mutation_gen, extract_probas=False):
-    t5_condProbas = T5_condProbas(cache_dir=CACHE_DIR)
+def run_logodds(seq_path, out_path, mutation_file, one_based_mutations, reconstruction_probas,
+                reconstruction_output, single_csv, csv_dir, cache_dir):
+    if VERBOSE:
+        print(f' Start Logodds Computation '.center(80, '#'))
+    seq_dict = utils.parse_fasta_input(seq_path)
+    mutation_gen = utils.MutationGenerator(
+        sequence_dict=seq_dict,
+        file_path=mutation_file,
+        one_based_file=one_based_mutations,
+    )
+
+    dmiss_data, probas = create_log_odds(
+        seq_dict, mutation_gen, cache_dir, reconstruction_probas
+    )
+
+    # TODO maybe save logodds more frequently?
+    T5_condProbas.write_single_h5(dmiss_data, out_path)
+
+    if reconstruction_probas:
+        T5_condProbas.write_single_h5(probas, reconstruction_output)
+
+    if single_csv:
+        T5_condProbas.write_single_csv(dmiss_data, single_csv, mutation_gen)
+    if csv_dir:
+        T5_condProbas.write_csv_dir(dmiss_data, csv_dir, mutation_gen)
+
+    if VERBOSE:
+        print(f'>> Finished Logodds Computation!')
+
+
+def create_log_odds(seq_dict, mutation_gen, cache_dir, extract_probas=False):
+    t5_condProbas = T5_condProbas(cache_dir=cache_dir)
     if VERBOSE:
         print("Running DMISS (Deep mutational in-silico scanning.)")
     proba_dict = t5_condProbas.get_proba_dict(seq_dict, mutation_gen)
@@ -122,26 +160,19 @@ def main():
 
     VERBOSE = args.verbose
 
-    seq_path = args.input
-    out_path = args.output
+    arguments = {
+        'seq_path': args.input,
+        'out_path': args.output,
+        'mutation_file': args.mutation_file,
+        'one_based_mutations': args.one_based_mutations,
+        'reconstruction_probas': args.reconstruction_probas,
+        'reconstruction_output': args.reconstruction_output,
+        'single_csv': args.single_csv,
+        'csv_dir': args.csv_dir,
+        'cache_dir': args.language_model_cache
+    }
+    run_logodds(**arguments)
 
-    seq_dict = utils.parse_fasta_input(seq_path)
-    mutation_gen = utils.MutationGenerator(
-        sequence_dict=seq_dict,
-        file_path=args.mutation_file,
-        one_based_file=args.one_based_mutations,
-    )
 
-    dmiss_data, probas = create_log_odds(
-        seq_dict, mutation_gen, args.reconstruction_probas
-    )
-
-    T5_condProbas.write_single_h5(dmiss_data, out_path)
-
-    if args.reconstruction_probas:
-        T5_condProbas.write_single_h5(probas, args.reconstruction_output)
-
-    if args.single_csv:
-        T5_condProbas.write_single_csv(dmiss_data, args.single_csv, mutation_gen)
-    if args.csv_dir:
-        T5_condProbas.write_csv_dir(dmiss_data, args.csv_dir, mutation_gen)
+if __name__ == '__main__':
+    main()

@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "vespa"
-version = "0.3.0-beta"
+version = "0.9.0-beta"
 description = ""
-authors = ["Tobias O <tobias.olenyi@tum.de>"]
+authors = ["Tobias O <tobias.olenyi@tum.de>", "Duc Anh Le <ducanh.le@tum.de>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
@@ -25,8 +25,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 vespa_logodds = 'vespa.scripts.logodds:main'
-vespa = 'vespa.scripts.vespa:main'
+vespa = 'vespa.scripts.meta:main'
 vespa_conspred = 'vespa.scripts.conspred:main'
+vespa_run = 'vespa.scripts.vespa_run:main'
+vespa_emb = 'vespa.scripts.embedding:main'
 
 [tool.poetry2conda]
 name = "vespa-env"

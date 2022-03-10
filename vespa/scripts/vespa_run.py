@@ -99,24 +99,9 @@ def setup_argparse():
     return parser
 
 
-def vespa_pred(args):
-
-    seq_path = args.fasta_file
-    out_path = args.output
-
-    VERBOSE = args.verbose
-
-    seq_dict = utils.parse_fasta_input(seq_path)
-    mutation_gen = utils.MutationGenerator(
-        sequence_dict=seq_dict,
-        file_path=args.mutation_file,
-        one_based_file=args.one_based_mutations,
-    )
-
-    vespa = args.vespa
-    vespal = args.vespal
-
-    if args.no_csv and not args.h5_output:
+def run_vespa(seq_path, out_path, vespa, vespal, cons_input, T5_input,
+              mutation_file, one_based_mutations, no_csv, h5_output):
+    if no_csv and not h5_output:
         raise RuntimeError(
             "Requested to run no vespa without output. Please specify --h5_output or remove --no_csv."
         )
@@ -126,22 +111,53 @@ def vespa_pred(args):
             "Requested to run no vespa-model. Please at least allow one model! E.g. `--vespa` or `--vespal`"
         )
 
+    if VERBOSE:
+        print(f' Start Vespa Predictions '.center(80, '#'))
+    seq_dict = utils.parse_fasta_input(seq_path)
+    mutation_gen = utils.MutationGenerator(
+        sequence_dict=seq_dict,
+        file_path=mutation_file,
+        one_based_file=one_based_mutations,
+    )
+
     predictor = VespaPred(vespa=vespa, vespal=vespal)
-
     input = dict()
-    input["conservations"] = predictor.parse_cons_input(args.cons_input)
+    input["conservations"] = predictor.parse_cons_input(cons_input)
     if vespa:
-        input["logodds"] = predictor.parse_logodds_input(args.T5_input)
-
+        input["logodds"] = predictor.parse_logodds_input(T5_input)
     output = predictor.generate_predictions(mutation_gen=mutation_gen, **input)
-    if not args.no_csv:
+
+    if not no_csv:
         predictor.write_output_csv(output, out_path)
-    if args.h5_output:
+    if h5_output:
         seq2len = {key: len(seq_dict[key]) for key in seq_dict}
-        predictor.write_output_h5(output, seq2len, args.h5_output)
+        predictor.write_output_h5(output, seq2len, h5_output)
+
+    if VERBOSE:
+        print(f'>> Finished Vespa Predictions!')
 
 
 def main():
     parser = setup_argparse()
     args = parser.parse_args()
-    vespa_pred(args)
+
+    arguments = {
+        'seq_path': args.fasta_file,
+        'out_path': args.output,
+        'vespa': args.vespa,
+        'vespal': args.vespal,
+        'cons_input': args.cons_input,
+        'mutation_file': args.mutation_file,
+        'one_based_mutations': args.one_based_mutations,
+        'no_csv': args.no_csv,
+        'h5_output': args.h5_output,
+        'T5_input': args.T5_input,
+    }
+
+    VERBOSE = args.verbose
+
+    run_vespa(**arguments)
+
+
+if __name__ == '__main__':
+    main()

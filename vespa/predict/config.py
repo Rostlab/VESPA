@@ -21,14 +21,15 @@
 from pathlib import Path
 import torch
 
+VESPA_LOCATION = Path(__file__).resolve().parent.parent.parent
 
 VESPA = "VESPA"
 VESPAL = "VESPAl"
 
 MODEL_PATH_DICT = {
-    VESPA: Path("models/VESPA-10LR_Cons_Blsm_Prob.pkl"),
-    VESPAL: Path("models/VESPAl-10LR_Cons_Blsm.pkl"),
-    "CONSCNN": Path("models/ProtT5cons_checkpoint.pt"),
+    VESPA: Path(VESPA_LOCATION.joinpath("models/VESPA-10LR_Cons_Blsm_Prob.pkl")),
+    VESPAL: Path(VESPA_LOCATION.joinpath("models/VESPAl-10LR_Cons_Blsm.pkl")),
+    "CONSCNN": Path(VESPA_LOCATION.joinpath("models/ProtT5cons_checkpoint.pt")),
 }
 
 OUTPUT_MAP_NAME = "map.json"
@@ -37,7 +38,7 @@ OUTPUT_MAP_NAME = "map.json"
 # https://huggingface.co/transformers/v3.1.0/_modules/transformers/tokenization_t5.html
 SPIECE_UNDERLINE = "▁"
 
-CACHE_DIR = Path("./cache")
+CACHE_DIR = "./cache"
 
 TRANSFORMER_LINK = "Rostlab/prot_t5_xl_uniref50"
 
@@ -55,3 +56,6 @@ VERBOSE = True
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 EMBEDDING_HALF_PREC = True
+
+EMBED, LOGODDS = 0, 1
+EMB_MAX_SEQ_LEN, EMB_MAX_RESIDUES, EMB_MAX_BATCH, EMB_STORE_FREQ = 600, 8000, 5, 200
