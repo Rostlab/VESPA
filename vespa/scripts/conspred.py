@@ -31,7 +31,7 @@ import h5py
 
 # Lib Imports
 import torch.utils.data
-from vespa.predict.config import MODEL_PATH_DICT
+from vespa.predict.config import MODEL_PATH_DICT, VERBOSE
 
 # Module Imports
 from vespa.predict.conspred import ProtT5Cons, get_dataloader
@@ -50,7 +50,7 @@ def create_arg_parser():
 
     # Required positional argument
     parser.add_argument(
-        "Input",
+        "input",
         type=Path,
         help="A path to a h5 embedding file, containing per-residue ProtT5 embeddings.",
     )
@@ -71,7 +71,7 @@ def create_arg_parser():
         "--checkpoint",
         required=False,
         type=Path,
-        default= None,
+        default=None,
         help="A path for the pre-trained checkpoint for the conservation CNN",
     )
 
@@ -79,7 +79,7 @@ def create_arg_parser():
     parser.add_argument(
         "--output_probs",
         type=bool,
-        default=True, 
+        default=True,
         action=argparse.BooleanOptionalAction,
         help="Output probabilities for all classes, not only class with highest probability. The probabilities are stored in an h5 file with a dataset per-protein of shape Lx20 (L being the protein length). This output is written to <output_prefix>_probs.h5)",
     )
@@ -88,7 +88,7 @@ def create_arg_parser():
     parser.add_argument(
         "--output_classes",
         type=bool,
-        default=True, 
+        default=False,
         action=argparse.BooleanOptionalAction,
         help="Output the conservation class prediction per residue in a fasta-like format with comma-separated per-residue classes. The output is written to <output_prefix>_class.fast)",
     )
@@ -96,29 +96,52 @@ def create_arg_parser():
     return parser
 
 
-def main():
-    parser = create_arg_parser()
-    args = parser.parse_args()
-
-    checkpoint_path = args.checkpoint if args.checkpoint else Path(MODEL_PATH_DICT["CONSCNN"])
-    out_prefix = args.output_prefix
-    out_class = Path(out_prefix + "_class.fasta")
-    out_probs = Path(out_prefix + "_probs.h5")
-
-    write_probs = args.output_probs
-    write_classes = args.output_classes
-
-    out_class.parent.mkdir(parents=True, exist_ok=True)
-
+def run_conspred(seq_path, checkpoint_path, write_probs, write_classes, out_prefix):
     try:
-        embeddings = h5py.File(str(args.Input.resolve()), 'r')
+        if VERBOSE:
+            print(f" Start Conservation Prediction ".center(80, "#"))
+        embeddings = h5py.File(str(seq_path.resolve()), "r")
         data_loader = get_dataloader(embeddings, batch_size=128)
+        if VERBOSE:
+            print(f" Load model! ")
         conspred = ProtT5Cons(checkpoint_path)
-        predictions = conspred.conservation_prediction(data_loader, prob_return=write_probs, class_return=write_classes)
+        if VERBOSE:
+            print(f" Predict Conservation! ")
+        predictions = conspred.conservation_prediction(
+            data_loader, prob_return=write_probs, class_return=write_classes
+        )
+
+        out_class = Path(str(out_prefix) + "_class.fasta")
+        out_probs = Path(str(out_prefix) + "_probs.h5")
+        out_class.parent.mkdir(parents=True, exist_ok=True)
+
         if write_classes:
             conspred.write_cons_class_pred(predictions, out_class)
         if write_probs:
             conspred.write_probabilities(predictions, out_probs)
+
+        if VERBOSE:
+            print(f">> Finished Conservation Prediction!")
     finally:
         embeddings.close()
 
+
+def main():
+    parser = create_arg_parser()
+    args = parser.parse_args()
+
+    arguments = {
+        "seq_path": args.input,
+        "checkpoint_path": args.checkpoint
+        if args.checkpoint
+        else Path(MODEL_PATH_DICT["CONSCNN"]),
+        "out_prefix": args.output_prefix,
+        "write_probs": args.output_probs,
+        "write_classes": args.output_classes,
+    }
+
+    run_conspred(**arguments)
+
+
+if __name__ == "__main__":
+    main()
