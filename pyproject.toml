@@ -1,8 +1,27 @@
 [tool.poetry]
-name = "vespa"
-version = "0.9.0-beta"
-description = ""
+name = "vespa-effect"
+version = "1.0.0"
+description = "Predictor for single-amino acid variant effects in protein sequences (https://doi.org/10.1007/s00439-021-02411-y)"
 authors = ["Tobias O <tobias.olenyi@tum.de>", "Duc Anh Le <ducanh.le@tum.de>"]
+license = 'AGPL-3.0-or-later'
+readme = "README.md"
+homepage = ""
+repository = "https://github.com/Rostlab/VESPA"
+keywords = [
+    "Embeddings",
+    "Protein-Sequences",
+    "Machine-Learning",
+    "Mutation-Effect"
+]
+
+include = [
+    "LICENSE",
+    "CODE_OF_CONDUCT.md",
+     "models/*"
+]
+packages = [
+    {include = "vespa"}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
@@ -29,14 +48,3 @@ vespa = 'vespa.scripts.meta:main'
 vespa_conspred = 'vespa.scripts.conspred:main'
 vespa_run = 'vespa.scripts.vespa_run:main'
 vespa_emb = 'vespa.scripts.embedding:main'
-
-[tool.poetry2conda]
-name = "vespa-env"
-
-[tool.poetry2conda.dependencies]
-poetry2conda = { channel = "conda-forge" }
-sentencepiece = { channel = "conda-forge" }
-transformers = { channel = "conda-forge" }
-torch = { channel = "conda-forge" }
-sklearn = { channel = "conda-forge" }
-

@@ -1,6 +1,6 @@
 import argparse
 from vespa.predict.embedding import *
-from vespa.predict.config import VERBOSE
+from vespa.predict.config import VERBOSE, CACHE_DIR
 
 
 def setup_argparse():
@@ -29,7 +29,7 @@ def setup_argparse():
     )
 
     parser.add_argument(
-        "--language_model_cache",
+        "--prott5_weights_cache",
         required=False,
         type=Path,
         default=Path(CACHE_DIR),
@@ -55,7 +55,7 @@ def main():
     arguments = {
         'seq_path': args.input,
         'out_path': args.output,
-        'cache_dir': args.language_model_cache
+        'cache_dir': args.prott5_weights_cache
     }
     run_embedding(**arguments)
 
