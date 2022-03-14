@@ -16,7 +16,7 @@
 """
 import argparse
 
-from vespa.predict.config import VERBOSE
+from vespa.predict.config import VERBOSE, CACHE_DIR
 from vespa.predict.logodds import *
 from vespa.predict import utils
 
@@ -101,7 +101,7 @@ def create_arg_parser():
     )
 
     parser.add_argument(
-        "--language_model_cache",
+        "--prott5_weights_cache",
         required=False,
         type=Path,
         default=Path(CACHE_DIR),
@@ -169,7 +169,7 @@ def main():
         'reconstruction_output': args.reconstruction_output,
         'single_csv': args.single_csv,
         'csv_dir': args.csv_dir,
-        'cache_dir': args.language_model_cache
+        'cache_dir': args.prott5_weights_cache
     }
     run_logodds(**arguments)
 
