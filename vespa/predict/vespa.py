@@ -99,7 +99,7 @@ class VespaPred:
 
                 # Transfer matrix to file
                 for name in self.models:
-                    seq_grp.create_dataset(name, data=results[name])
+                    seq_grp.create_dataset(name, data=results[name].T)
 
     @staticmethod
     def parse_logodds_input(input_file: Path):
