@@ -30,13 +30,13 @@ def setup_argparse():
         "--vespa",
         help="Run the VESPA model",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
     )
     parser.add_argument(
         "--vespal",
         help="Run the VESPAl model",
         default=True,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
     )
 
     # Optional argument
@@ -156,17 +156,15 @@ def conspred_argparse(group):
 
     group.add_argument(
         "--output_probs",
-        type=bool,
         default=True,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
         help="Output probabilities for all classes, not only class with highest probability. The probabilities are stored in an h5 file with a dataset per-protein of shape Lx20 (L being the protein length). This output is written to <output_prefix>_probs.h5)",
     )
 
     group.add_argument(
         "--output_classes",
-        type=bool,
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
         help="Output the conservation class prediction per residue in a fasta-like format with comma-separated per-residue classes. The output is written to <output_prefix>_class.fast)",
     )
 

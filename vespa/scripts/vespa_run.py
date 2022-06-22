@@ -29,13 +29,13 @@ def setup_argparse():
         "--vespa",
         help="Run the VESPA model",
         default=True,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
     )
     parser.add_argument(
         "--vespal",
         help="Run the VESPAl model",
         default=True,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
     )
     parser.add_argument(
         "cons_input",
