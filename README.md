@@ -217,7 +217,7 @@ A438W;0.004520446062088013
 
 ##### VESPA and VESPAl output
 
-The default output of **VESPA** and/or **VESPAl** will generate one .csv file per protein in the output folder of `vespa_run_directory`. If you specified an output directory with `--output`, you will find the .csv files there.
+The default output of **VESPA** and/or **VESPAl** will generate one .csv (with semicolon separator) file per protein in the output folder of `vespa_run_directory`. If you specified an output directory with `--output`, you will find the .csv (with semicolon separator) files there.
 To circumvent naming issues due to long sequence ID's, the csv files will be numbered by sequence occurrence in the `FASTA` file. A lookup file `map.json` will be created in the output directory containing a dictionary mapping from number to sequence ID.
 
 Example `map.json`:
