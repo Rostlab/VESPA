@@ -28,13 +28,13 @@ def setup_argparse():
     parser.add_argument(
         "--vespa",
         help="Run the VESPA model",
-        default=True,
+        default=False,
         action='store_true',
     )
     parser.add_argument(
         "--vespal",
         help="Run the VESPAl model",
-        default=True,
+        default=False,
         action='store_true',
     )
     parser.add_argument(
