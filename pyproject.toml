@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vespa-effect"
-version = "1.0.1"
+version = "1.0.2"
 description = "Predictor for single-amino acid variant effects in protein sequences (https://doi.org/10.1007/s00439-021-02411-y)"
 authors = ["Tobias O <tobias.olenyi@tum.de>", "Duc Anh Le <ducanh.le@tum.de>"]
 license = 'AGPL-3.0-or-later'
