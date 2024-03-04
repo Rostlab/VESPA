@@ -14,6 +14,8 @@ The single-sequence-based SAV effect prediction is set up in a multistage pipeli
 The specifics of **VESPA** and **VESPAl** can be found in our paper, [_Embeddings from protein language models predict conservation and variant effects_ (Marquet et al., 2021)](https://doi.org/10.1007/s00439-021-02411-y). The performance of **VESPA** when evaluated against SOTA methods can be seen below.
 <div align="center"><img src="images/point_main_0823.png" width="75%" height="75%"/></div>
 
+Also check out [MutAlign](https://github.com/kWeissenow/MutAlign), a tool to visually compare VESPA mutation effect predictions for highly similar sequences (e.g. the same protein in different organisms).
+
 ## Precomputed VESPA and VESPAl predictions
 
 Precomputed **VESPA** and **VESPAl** predictions are currently available for 39 _DMS experiments_ here:  [_Supplementary file 3 of (Marquet et al., 2021)_](https://doi.org/10.1007/s00439-021-02411-y). Furthermore, **VESPAl** predictions are available for the [_human proteome_](https://doi.org/10.5281/zenodo.5905863) (downloaded 22/01/17), and for the [__fly (drosophila melanogaster) proteome__](https://doi.org/10.5281/zenodo.6322184) (downloaded 22/03/01).
